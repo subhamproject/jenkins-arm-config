@@ -1,0 +1,25 @@
+#!/bin/bash -e
+
+mkdir -p /jenkins
+
+#Adding Jenkins user in slave
+useradd -d /jenkins jenkins
+chown -R jenkins:jenkins /jenkins
+
+
+# Configuring aws region for jenkins users
+su - jenkins -c "aws configure set default.region ap-south-1"
+su - jenkins -c "cp -p /etc/skel/.bash* /jenkins/"
+
+#Installing required packages(docker,java,git..)
+yum update -y
+yum install -y git docker-19.03.13ce java-11-amazon-corretto-headless python3 unix2dos jq sendmail mailx
+sed -i '/^OPTIONS/s;"$; -H=unix:///var/run/docker.sock -H=0.0.0.0:2375";' /etc/sysconfig/docker
+systemctl enable docker
+systemctl start docker
+
+# Adding ec2-user,jenkins users to docker group
+gpasswd -M jenkins,ec2-user docker
+
+cp -a /home/ec2-user/.ssh /jenkins/
+chown -R jenkins:jenkins /jenkins/.ssh
