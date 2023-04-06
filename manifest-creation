@@ -1,0 +1,25 @@
+export DOCKER_CLI_EXPERIMENTAL=enabled
+SUPPORTED_ARCH="amd64 arm64"
+
+create_manifest() {
+  local tag=$1
+  for acct_region in $(get_registries)
+  do
+    local acct=$(echo $acct_region | cut -f1 -d:)
+    local region=$(echo $acct_region | cut -f2 -d:)
+    local ecr_host="$acct.dkr.ecr.$region.amazonaws.com"
+    ecr_login_acct $acct $region
+    for arch in $SUPPORTED_ARCH
+    do
+      docker manifest create --amend \
+        ${ecr_host}/${IMAGE_NAME}:${tag} \
+        ${ecr_host}/${IMAGE_NAME}:${arch}-${tag}
+    done
+    docker manifest push --purge ${ecr_host}/${IMAGE_NAME}:${tag}
+    [ $? -ne 0 ] && error "Pushing manifest failed!"
+  done
+}
+
+
+
+https://dev.to/aws-builders/using-docker-manifest-to-create-multi-arch-images-on-aws-graviton-processors-1320
